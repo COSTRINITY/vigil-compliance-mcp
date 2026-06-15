@@ -1,0 +1,49 @@
+{
+  "name": "@costrinity/vigil-compliance-mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing VIGIL's compliance fabric — consent / breach / DPIA / AI Act / identifier validators / cross-border — as tools LLM agents can call mid-task. 13 jurisdictions, 28+ regulatory regimes.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "vigil-compliance-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "tsc"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "compliance",
+    "dpdp",
+    "gdpr",
+    "ai-act",
+    "privacy",
+    "ai-agents",
+    "vigil",
+    "costrinity",
+    "indigenous-owned"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "COSTRINITY (Indigenous-owned software studio, Regina, Saskatchewan, Treaty 4 territory)",
+  "license": "MIT",
+  "homepage": "https://vigil.costrinity.xyz/why-vigil",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/COSTRINITY/vigil-compliance-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/COSTRINITY/vigil-compliance-mcp/issues"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

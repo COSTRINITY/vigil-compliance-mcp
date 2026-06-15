@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.json",
+  "name": "io.github.COSTRINITY/vigil-compliance-mcp",
+  "description": "Pre-flight compliance checks your AI agent calls before it acts, plus signed, audit-grade records after, mapped to the EU AI Act, India's DPDP, and 11 more regimes.",
+  "version": "0.1.0",
+  "websiteUrl": "https://vigil.costrinity.xyz/why-vigil",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@costrinity/vigil-compliance-mcp",
+      "version": "0.1.0",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        { "name": "VIGIL_OWNER_ID", "description": "Your VIGIL operator UUID (from your dashboard URL).", "isRequired": true },
+        { "name": "VIGIL_API_KEY", "description": "Your VIGIL API key (vigil_...). Authenticates tool calls.", "isSecret": true },
+        { "name": "VIGIL_BASE_URL", "description": "VIGIL base URL; override only for self-hosted.", "default": "https://vigil.costrinity.xyz" }
+      ]
+    }
+  ]
+}

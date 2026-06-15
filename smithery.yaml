@@ -1,0 +1,28 @@
+# Smithery registry manifest for @costrinity/vigil-compliance-mcp
+# Docs: https://smithery.ai/docs/build/project-config
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required: ["vigilOwnerId"]
+    properties:
+      vigilOwnerId:
+        type: string
+        description: "Your VIGIL operator UUID (from your dashboard URL)."
+      vigilApiKey:
+        type: string
+        description: "Your VIGIL API key (vigil_...). Authenticates tool calls."
+      vigilBaseUrl:
+        type: string
+        default: "https://vigil.costrinity.xyz"
+        description: "VIGIL base URL. Override only for self-hosted."
+  commandFunction: |
+    (config) => ({
+      command: 'npx',
+      args: ['@costrinity/vigil-compliance-mcp'],
+      env: {
+        VIGIL_OWNER_ID: config.vigilOwnerId,
+        VIGIL_API_KEY: config.vigilApiKey || '',
+        VIGIL_BASE_URL: config.vigilBaseUrl || 'https://vigil.costrinity.xyz'
+      }
+    })
