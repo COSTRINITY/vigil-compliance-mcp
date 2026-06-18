@@ -4,6 +4,8 @@
 
 Pair with [`@costrinity/vigil-mcp`](https://www.npmjs.com/package/@costrinity/vigil-mcp) (the JSON-RPC observer): the observer captures what your agent does, this server gives your agent compliance superpowers before it acts.
 
+**Signed audit records:** every decision tool here (consent, AI Act, breach, DPIA, sectoral) writes an HMAC-signed, tamper-evident record of its verdict the moment it runs, retrievable and verifiable via `GET /api/compliance/preflight-audit`. Pure validators and lookups make no decision and are not recorded.
+
 ## What it gives your agent
 
 | Tool | Purpose |
