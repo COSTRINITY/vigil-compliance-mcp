@@ -332,6 +332,22 @@ const TOOLS: ToolDef[] = [
         : '/api/india/regulators',
     }),
   },
+
+  // ─── Destructive-action pre-flight gate ──────────────────────────
+  {
+    name: 'action_preflight',
+    description:
+      "Pre-flight check BEFORE a sensitive / destructive action (shell command, file deletion, DB statement, network call). Runs VIGIL's heuristic threat classifier (sql_destructive / shell_dangerous / secret_leak / prompt_injection / exfiltration / suspicious_network) over the proposed action and returns { decision: allowed|blocked|flagged, threat_category, reason } plus a signed audit record. Heuristic pattern match and a cooperative guardrail, not a sandbox: it cannot enforce on its own and novel or obfuscated payloads can pass.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', description: 'The proposed action / command text, e.g. "rm -rf /" or "DROP TABLE users".' },
+        payload: { type: 'object', description: 'Optional structured payload to scan alongside the action text.' },
+        action_type: { type: 'string', description: 'Optional short label for the action kind (shell, file_delete, db_query, network).' },
+      },
+    },
+    call: (input) => ({ method: 'POST', path: '/api/preflight/action-check', body: input }),
+  },
 ];
 
 // ─── HTTP transport ────────────────────────────────────────────────

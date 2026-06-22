@@ -1,7 +1,7 @@
 {
   "name": "@costrinity/vigil-compliance-mcp",
   "mcpName": "io.github.COSTRINITY/vigil-compliance-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server exposing VIGIL's compliance fabric (consent, breach, DPIA, AI Act, identifier validators, cross-border) as tools LLM agents can call mid-task; decision checks write signed, tamper-evident audit records. 13 jurisdictions, 28+ regulatory regimes.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

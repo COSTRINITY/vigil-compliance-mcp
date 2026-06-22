@@ -4,13 +4,14 @@
 
 Pair with [`@costrinity/vigil-mcp`](https://www.npmjs.com/package/@costrinity/vigil-mcp) (the JSON-RPC observer): the observer captures what your agent does, this server gives your agent compliance superpowers before it acts.
 
-**Signed audit records:** every decision tool here (consent, AI Act, breach, DPIA, sectoral) writes an HMAC-signed, tamper-evident record of its verdict the moment it runs, retrievable and verifiable via `GET /api/compliance/preflight-audit`. Pure validators and lookups make no decision and are not recorded.
+**Signed audit records:** every decision tool here (consent, AI Act, breach, DPIA, sectoral, action pre-flight) writes an HMAC-signed, tamper-evident record of its verdict the moment it runs, retrievable and verifiable via `GET /api/compliance/preflight-audit`. Pure validators and lookups make no decision and are not recorded.
 
 ## What it gives your agent
 
 | Tool | Purpose |
 |---|---|
 | `consent_check` | Is processing allowed for this principal + purpose? (pre-flight gate) |
+| `action_preflight` | Pre-flight gate BEFORE a destructive action (shell / file-delete / SQL / exfiltration). Heuristic, cooperative, not a sandbox |
 | `breach_classify` | Is this incident reportable? Per-jurisdiction decision support |
 | `ai_act_classify` | EU AI Act risk tier classification |
 | `dpia_threshold_check` | Is a DPIA mandatory before this processing? |
