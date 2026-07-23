@@ -38,6 +38,16 @@ npm install -g @costrinity/vigil-compliance-mcp
 
 Or use directly via `npx`.
 
+### Docker
+
+```bash
+docker build -t costrinity/vigil-compliance-mcp .
+docker run --rm -i costrinity/vigil-compliance-mcp
+```
+
+A stdio MCP server (no port; run with `-i`). Self-provisions a restricted trial
+key on first use, same as `npx`.
+
 ## Configure your MCP client
 
 ### Zero-config (self-provisioning)

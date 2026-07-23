@@ -65,7 +65,7 @@ let VIGIL_CLAIM_URL = '';
 let justProvisioned = false;
 
 const SERVER_NAME = 'vigil-compliance';
-const SERVER_VERSION = '0.2.0';
+const SERVER_VERSION = '0.2.1';
 
 // ─── Tool catalogue ────────────────────────────────────────────────
 
@@ -94,7 +94,7 @@ const TOOLS: ToolDef[] = [
   {
     name: 'consent_check',
     description:
-      "Pre-flight check: is processing allowed for this data principal + purpose? Returns { allowed, reason, matching_consent_id, principal_id }. Call this BEFORE processing data on behalf of a principal.",
+      "Before you process someone's personal data, ask VIGIL whether an active consent actually permits it for this purpose. Give the data principal + purpose (and optional category); returns { allowed, reason, matching_consent_id, principal_id }, a determination you must honour yourself since VIGIL evaluates and records but does not enforce. Use this for personal-data processing legality; for a dangerous technical action (shell / file / DB / network) use action_preflight instead.",
     inputSchema: {
       type: 'object',
       required: ['purpose'],
@@ -116,7 +116,7 @@ const TOOLS: ToolDef[] = [
   {
     name: 'breach_classify',
     description:
-      'Decide whether an incident is reportable per the operator\'s jurisdiction (DPDP §8, GDPR Art 33, CPRA §1798.82, LGPD Art 48, PDPA §26B, US-FED sectoral). Returns reportability + reasoning + deadline + recipient.',
+      "After a security incident, check whether it is legally reportable before you decide how to respond. Give the incident facts (affected count, data categories, sensitivity, recovery state) and VIGIL returns reportability + reasoning + the notification deadline + who to notify, across DPDP §8, GDPR Art 33, CPRA §1798.82, LGPD Art 48, PDPA §26B, and US-FED sectoral. This makes the full incident decision from the facts; for a quick per-US-state deadline/recipient/threshold table without incident facts, use us_state_breach_deadline. VIGIL evaluates and records; acting on the result is up to you.",
     inputSchema: {
       type: 'object',
       required: ['affected_count', 'data_categories', 'sensitivity', 'recovery_state'],
@@ -136,7 +136,7 @@ const TOOLS: ToolDef[] = [
   {
     name: 'ai_act_classify',
     description:
-      "Classify an AI use case under the EU AI Act (Regulation 2024/1689). Returns risk tier (prohibited / high-risk / limited-risk / minimal-risk) + GPAI obligations + per-tier remediation obligations.",
+      "Before you build or ship an AI feature, check where it lands under the EU AI Act (Regulation 2024/1689). Describe the use case (with biometric / remote-identification / automated-decision / social-scoring / GPAI flags) and VIGIL returns the risk tier (prohibited / high-risk / limited-risk / minimal-risk), GPAI obligations, and the per-tier obligations you would have to meet. A classification for you to act on: VIGIL evaluates and records, it does not gate the build.",
     inputSchema: {
       type: 'object',
       required: ['use_case'],
@@ -158,7 +158,7 @@ const TOOLS: ToolDef[] = [
   {
     name: 'dpia_threshold_check',
     description:
-      'Decide if a DPIA is mandatory before processing under GDPR Art 35 / DPDP §10 / LGPD Art 38. Returns dpia_required + 9-criterion WP29 analysis + jurisdiction-specific guidance.',
+      "Before you start a new processing activity, check whether the law requires a DPIA first (GDPR Art 35 / DPDP §10 / LGPD Art 38). Give the purpose + data categories (and scale / systematic-monitoring / automated-decision / cross-border / vulnerable-subjects flags); returns dpia_required + the 9-criterion WP29 analysis + jurisdiction guidance, so you know whether to pause and assess before proceeding.",
     inputSchema: {
       type: 'object',
       required: ['processing_purpose', 'data_categories'],
@@ -180,7 +180,7 @@ const TOOLS: ToolDef[] = [
   {
     name: 'us_sectoral_check',
     description:
-      'Determine which US sectoral laws apply (HIPAA, GLBA, COPPA, FERPA, FCRA, SOX) given a processing profile.',
+      "Before you process personal data under US law, find out which US federal sectoral regimes bind you (HIPAA, GLBA, COPPA, FERPA, FCRA, SOX) for a given processing profile, so you can factor them in before you act. US-scoped; for Indian sectoral regulators use india_sectoral_check.",
     inputSchema: {
       type: 'object',
       required: ['processing_purpose', 'data_categories'],
@@ -199,7 +199,7 @@ const TOOLS: ToolDef[] = [
   {
     name: 'india_sectoral_check',
     description:
-      'Determine which Indian sectoral regulators apply (RBI / SEBI / IRDAI / TRAI / DoT / PFRDA) given a processing profile.',
+      "Before you process personal data under Indian law, find out which sectoral regulators actually bind your specific activity (RBI / SEBI / IRDAI / TRAI / DoT / PFRDA) from its processing profile, so you know whose rules apply before you act. This analyses your processing to say what applies; for a plain directory of every Indian regulator regardless of your activity, use india_regulators_directory.",
     inputSchema: {
       type: 'object',
       required: ['processing_purpose', 'data_categories'],
@@ -217,7 +217,7 @@ const TOOLS: ToolDef[] = [
   {
     name: 'india_cross_border_status',
     description:
-      'Look up DPDP §16 cross-border transfer status for a destination country. Returns permitted / restricted / sectoral_restricted + RBI/SEBI/IRDAI caveats.',
+      "Before you transfer personal data out of India, check the destination country's DPDP §16 status (permitted / restricted / sectoral_restricted) plus any RBI / SEBI / IRDAI caveats. Pass the ISO-3166 alpha-2 country code (e.g. US).",
     inputSchema: {
       type: 'object',
       required: ['country'],
@@ -231,7 +231,7 @@ const TOOLS: ToolDef[] = [
   {
     name: 'japan_cross_border_status',
     description:
-      'Look up Japan APPI Art 28 cross-border status for a destination country (adequacy / standard basis / high scrutiny).',
+      "Before you transfer personal data out of Japan, check the destination country's APPI Art 28 status (adequacy / standard basis / high scrutiny). Pass the ISO-3166 alpha-2 country code.",
     inputSchema: {
       type: 'object',
       required: ['country'],
@@ -247,7 +247,7 @@ const TOOLS: ToolDef[] = [
   {
     name: 'us_state_breach_deadline',
     description:
-      "Look up a US state's breach-notification window + AG recipient + threshold (e.g. 'CA' → 500 residents → CA AG → expedient).",
+      "Quick reference lookup of a single US state's breach-notification window, AG recipient and resident threshold (e.g. 'CA' gives 500 residents, CA AG, without unreasonable delay). This is a static table, not an incident ruling. When you have the actual incident facts and need a reportable / not-reportable decision with reasoning, use breach_classify instead.",
     inputSchema: {
       type: 'object',
       required: ['state'],
@@ -304,7 +304,7 @@ const TOOLS: ToolDef[] = [
   {
     name: 'pii_test',
     description:
-      "Dry-run PII / threat detection against a sample event. Returns what would be tagged, redacted preview, and whether severity would be escalated. No persistence.",
+      "Dry-run VIGIL's PII / threat detection on a sample event before you send real data, to preview what would be tagged, how it would be redacted, and whether severity would escalate. Nothing is persisted and nothing is filtered: a safe rehearsal you act on, not an enforced gate.",
     inputSchema: {
       type: 'object',
       required: ['sample_event'],
@@ -344,7 +344,7 @@ const TOOLS: ToolDef[] = [
   },
   {
     name: 'india_regulators_directory',
-    description: "Directory of Indian regulators (DPB, RBI, SEBI, IRDAI, TRAI, DoT, PFRDA, MeitY, MCA) with sectoral filter.",
+    description: "Static reference directory of Indian data and sector regulators (DPB, RBI, SEBI, IRDAI, TRAI, DoT, PFRDA, MeitY, MCA), optionally filtered by sector: a lookup of who exists and what they cover. To instead work out which of them apply to a specific processing activity, use india_sectoral_check.",
     inputSchema: {
       type: 'object',
       properties: { sector: { type: 'string' } },
