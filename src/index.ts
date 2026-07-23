@@ -47,13 +47,25 @@
  */
 
 import { createInterface } from 'node:readline';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { homedir, hostname } from 'node:os';
+import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
 
 const VIGIL_BASE_URL = process.env.VIGIL_BASE_URL ?? 'https://vigil.costrinity.xyz';
-const VIGIL_OWNER_ID = process.env.VIGIL_OWNER_ID ?? '';
-const VIGIL_API_KEY = process.env.VIGIL_API_KEY ?? '';
+// let, not const: when absent, these are populated on first use by
+// self-provisioning (a restricted trial key) or from the local cache.
+let VIGIL_OWNER_ID = process.env.VIGIL_OWNER_ID ?? '';
+let VIGIL_API_KEY = process.env.VIGIL_API_KEY ?? '';
+// Claim URL for the current (trial) account, learned on provision or from the
+// cache. justProvisioned is true only on the single tool call that triggered
+// self-provisioning, so the very first tool response can carry a plain-language
+// connection notice the agent relays to the user.
+let VIGIL_CLAIM_URL = '';
+let justProvisioned = false;
 
 const SERVER_NAME = 'vigil-compliance';
-const SERVER_VERSION = '0.1.0';
+const SERVER_VERSION = '0.2.0';
 
 // ─── Tool catalogue ────────────────────────────────────────────────
 
@@ -61,11 +73,23 @@ interface ToolDef {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
-  /** Maps the MCP call to a VIGIL HTTP request. */
-  call: (input: Record<string, unknown>) => { method: string; path: string; body?: unknown };
+  /** Maps the MCP call to a VIGIL HTTP request. Omitted for local tools. */
+  call?: (input: Record<string, unknown>) => { method: string; path: string; body?: unknown };
+  /** Local tool: returns a value directly with no VIGIL HTTP call (no auth, no
+   *  metering). Used for the self-describe / onboarding tool. */
+  local?: (input: Record<string, unknown>) => unknown;
 }
 
 const TOOLS: ToolDef[] = [
+  // ─── Onboarding / self-describe (call this first) ────────────────
+  {
+    name: 'vigil_help',
+    description:
+      "What is VIGIL and how do I use it to keep myself in check? Call this FIRST after connecting to learn the safety and oversight checks available: how to check risky actions BEFORE running them, what a deny / hold decision means, trial vs claimed mode, and how the user can monitor and audit what you do. Lightweight, no account or network needed.",
+    inputSchema: { type: 'object', properties: {} },
+    local: () => vigilHelp(),
+  },
+
   // ─── Consent + processing gate ───────────────────────────────────
   {
     name: 'consent_check',
@@ -337,7 +361,7 @@ const TOOLS: ToolDef[] = [
   {
     name: 'action_preflight',
     description:
-      "Pre-flight check BEFORE a sensitive / destructive action (shell command, file deletion, DB statement, network call). Runs VIGIL's heuristic threat classifier (sql_destructive / shell_dangerous / secret_leak / prompt_injection / exfiltration / suspicious_network) over the proposed action and returns { decision: allowed|blocked|flagged, threat_category, reason } plus a signed audit record. Heuristic pattern match and a cooperative guardrail, not a sandbox: it cannot enforce on its own and novel or obfuscated payloads can pass.",
+      "SAFETY / OVERSIGHT CHECK before a dangerous or destructive action (shell command, file deletion, DB statement, network call). Call this to have VIGIL check the action BEFORE you run it: it flags dangerous shell / SQL / secret-exfil / prompt-injection / suspicious-network patterns and returns { decision: allowed|blocked|flagged, threat_category, reason } plus (in claimed mode) a signed audit record the user can review. VIGIL evaluates and records; it does NOT enforce, so treat blocked / flagged as a stop and get human approval. This is how a user keeps you in check. Heuristic pattern match, not a sandbox: novel or obfuscated payloads can pass.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -350,9 +374,95 @@ const TOOLS: ToolDef[] = [
   },
 ];
 
+// ─── Self-provisioning (restricted trial key on first use) ─────────
+//
+// When VIGIL_OWNER_ID / VIGIL_API_KEY are not set, the first tool call
+// provisions a RESTRICTED trial key via /api/setup, caches it locally, and
+// surfaces the claim URL so a human can claim the account (lifting the limits
+// and unlocking signed evidence). Explicit env credentials always win. Set
+// VIGIL_EMAIL to own the trial account under a real address; otherwise a
+// throwaway is used and the human can bind a real email later by claiming.
+
+const CRED_FILE = join(homedir(), '.vigil', 'credentials.json');
+
+function loadCachedCreds(): { owner_id: string; api_key: string; claim_url?: string } | null {
+  try {
+    const c = JSON.parse(readFileSync(CRED_FILE, 'utf8'));
+    if (c && typeof c.owner_id === 'string' && typeof c.api_key === 'string' && c.owner_id && c.api_key) {
+      return { owner_id: c.owner_id, api_key: c.api_key, claim_url: typeof c.claim_url === 'string' ? c.claim_url : undefined };
+    }
+  } catch {
+    /* no cache yet */
+  }
+  return null;
+}
+
+function saveCachedCreds(c: Record<string, unknown>): void {
+  try {
+    mkdirSync(join(homedir(), '.vigil'), { recursive: true });
+    writeFileSync(CRED_FILE, JSON.stringify(c, null, 2), { mode: 0o600 });
+  } catch (e) {
+    console.error('[vigil-compliance-mcp] could not cache credentials:', e instanceof Error ? e.message : String(e));
+  }
+}
+
+async function provision(): Promise<void> {
+  const owner_email = process.env.VIGIL_EMAIL || `agent-${randomBytes(6).toString('hex')}@mcp.vigil.local`;
+  const agent_name = process.env.VIGIL_AGENT_NAME || `vigil-compliance-mcp-${hostname()}`;
+  try {
+    const res = await fetch(`${VIGIL_BASE_URL}/api/setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': `vigil-compliance-mcp/${SERVER_VERSION}` },
+      body: JSON.stringify({ owner_email, agent_name }),
+    });
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!res.ok || typeof data.api_key !== 'string' || typeof data.owner_id !== 'string') {
+      console.error(
+        `[vigil-compliance-mcp] self-provision did not return a key (HTTP ${res.status}). ` +
+          `${typeof data.error === 'string' ? data.error + '. ' : ''}` +
+          'Set VIGIL_OWNER_ID + VIGIL_API_KEY manually, or VIGIL_EMAIL to a fresh address.',
+      );
+      return;
+    }
+    VIGIL_OWNER_ID = data.owner_id;
+    VIGIL_API_KEY = data.api_key;
+    if (typeof data.claim_url === 'string') VIGIL_CLAIM_URL = data.claim_url;
+    justProvisioned = true;
+    saveCachedCreds({ owner_id: VIGIL_OWNER_ID, api_key: VIGIL_API_KEY, base_url: VIGIL_BASE_URL, claim_url: data.claim_url ?? null });
+    console.error(
+      `[vigil-compliance-mcp] provisioned a restricted trial key (owner ${VIGIL_OWNER_ID}). ` +
+        (typeof data.claim_url === 'string'
+          ? `Claim it for full access + signed evidence: ${data.claim_url}`
+          : 'Claim it from your VIGIL dashboard for full access.'),
+    );
+  } catch (e) {
+    console.error('[vigil-compliance-mcp] self-provision failed:', e instanceof Error ? e.message : String(e));
+  }
+}
+
+// Memoized so /api/setup is called at most once even under concurrent tools.
+let credsReady: Promise<void> | null = null;
+function ensureCredentials(): Promise<void> {
+  if (!credsReady) {
+    credsReady = (async () => {
+      if (VIGIL_OWNER_ID && VIGIL_API_KEY) return; // explicit env credentials win
+      const cached = loadCachedCreds();
+      if (cached) {
+        VIGIL_OWNER_ID = cached.owner_id;
+        VIGIL_API_KEY = cached.api_key;
+        if (cached.claim_url) VIGIL_CLAIM_URL = cached.claim_url;
+        return;
+      }
+      await provision();
+    })();
+  }
+  return credsReady;
+}
+
 // ─── HTTP transport ────────────────────────────────────────────────
 
 async function callVigil(method: string, path: string, body?: unknown): Promise<unknown> {
+  await ensureCredentials();
   const url = `${VIGIL_BASE_URL}${path}${path.includes('?') ? '&' : '?'}owner_id=${encodeURIComponent(VIGIL_OWNER_ID)}`;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -373,6 +483,46 @@ async function callVigil(method: string, path: string, body?: unknown): Promise<
   } catch {
     return { _raw: text, _status: res.status };
   }
+}
+
+// ─── Onboarding + connection notice ────────────────────────────────
+
+/** Plain-language guide the agent gets from vigil_help. No network / auth. */
+function vigilHelp(): Record<string, unknown> {
+  return {
+    what_is_vigil:
+      'VIGIL is a safety and compliance oversight layer for AI agents. Before you take a risky action you ask VIGIL; it returns an allow / deny / hold decision and, in claimed mode, keeps a signed, tamper-evident record a human can audit. It is how a user keeps you in check and monitors what you do.',
+    how_to_use: [
+      'Before a dangerous action (shell command, file delete, DB statement, network call), call action_preflight with the action text. decision=allowed means proceed; blocked or flagged means STOP and get human approval.',
+      'Before handling personal data, call consent_check / breach_classify / dpia_threshold_check / ai_act_classify as relevant.',
+      'VIGIL evaluates and records; it does NOT enforce for you. YOU must honor a deny or hold: stop, get approval, then proceed.',
+    ],
+    safety_checks: [
+      'action_preflight - flag dangerous shell / SQL / secret-exfil / prompt-injection / suspicious-network actions before they run',
+      'consent_check - is processing allowed for this person + purpose',
+      'breach_classify - is an incident reportable, by when, to whom',
+      'dpia_threshold_check / ai_act_classify - risk classification before you build or ship',
+    ],
+    trial_vs_claimed:
+      'On first use with no credentials you connect in TRIAL mode: decision checks work but are rate-limited, return label-only results, and do not persist signed evidence. Claiming the account (claim_url) unlocks full detail, higher limits, and signed audit records.',
+    claim_url: VIGIL_CLAIM_URL || null,
+    tell_the_user:
+      'Explain to the user that you are connected to a safety oversight layer, that you will check risky actions before running them, and share the claim link so they can keep the audit records and monitor you.',
+  };
+}
+
+/** One-time notice, in language the agent can relay to the user, emitted on the
+ *  first tool response after self-provisioning. */
+function connectionNotice(): string {
+  return [
+    'CONNECTED TO VIGIL, a safety and compliance oversight layer, in TRIAL mode.',
+    'You can now check risky actions BEFORE you run them: call action_preflight for shell / file / DB / network actions, or the compliance checks for data handling. Each returns an allow / deny / hold decision. Treat deny or hold as a stop and get human approval before proceeding.',
+    'This trial key is rate-limited and does NOT keep signed audit evidence.',
+    VIGIL_CLAIM_URL
+      ? `To keep your audit records and raise the limits, tell the user to claim this account: ${VIGIL_CLAIM_URL}`
+      : 'To keep your audit records and raise the limits, ask the user to claim this account from the VIGIL dashboard.',
+    'Relay this to the user in your own words, including the claim link.',
+  ].join(' ');
 }
 
 // ─── MCP JSON-RPC plumbing ──────────────────────────────────────────
@@ -430,13 +580,25 @@ async function handle(req: JsonRpcReq): Promise<void> {
           err(id, -32602, `unknown tool: ${params.name}`);
           return;
         }
-        const { method, path, body } = tool.call(params.arguments ?? {});
-        const result = await callVigil(method, path, body);
-        ok(id, {
-          content: [
-            { type: 'text', text: JSON.stringify(result, null, 2) },
-          ],
-        });
+        let result: unknown;
+        if (tool.local) {
+          result = tool.local(params.arguments ?? {});
+        } else if (tool.call) {
+          const { method, path, body } = tool.call(params.arguments ?? {});
+          result = await callVigil(method, path, body);
+        } else {
+          err(id, -32603, `tool ${tool.name} has no handler`);
+          return;
+        }
+        const content: Array<{ type: 'text'; text: string }> = [];
+        // On the tool call that triggered self-provisioning, lead with a
+        // plain-language connection notice the agent can relay to the user.
+        if (justProvisioned) {
+          justProvisioned = false;
+          content.push({ type: 'text', text: connectionNotice() });
+        }
+        content.push({ type: 'text', text: JSON.stringify(result, null, 2) });
+        ok(id, { content });
         return;
       }
 
@@ -455,10 +617,11 @@ async function handle(req: JsonRpcReq): Promise<void> {
 
 // ─── Main loop ─────────────────────────────────────────────────────
 
-if (!VIGIL_OWNER_ID) {
+if (!VIGIL_OWNER_ID && !loadCachedCreds()) {
   console.error(
-    '[vigil-compliance-mcp] VIGIL_OWNER_ID not set — every tool call will 401. ' +
-      'Set this to your operator UUID before adding the server to your MCP client.',
+    '[vigil-compliance-mcp] No VIGIL_OWNER_ID / VIGIL_API_KEY set. ' +
+      'The first tool call will self-provision a restricted trial key and print a claim URL. ' +
+      'Set VIGIL_EMAIL to own it under a real address, or set VIGIL_OWNER_ID + VIGIL_API_KEY to use an existing key.',
   );
 }
 

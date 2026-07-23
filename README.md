@@ -1,15 +1,18 @@
 # @costrinity/vigil-compliance-mcp
 
-**MCP server exposing VIGIL's compliance fabric as tools your LLM agents can call.**
+**A safety and compliance oversight layer for AI agents.** Your agent checks risky actions before it runs them, gets an allow / deny / hold decision, and keeps a signed, auditable record, so a human can monitor what the agent does and keep it in check.
 
-Pair with [`@costrinity/vigil-mcp`](https://www.npmjs.com/package/@costrinity/vigil-mcp) (the JSON-RPC observer): the observer captures what your agent does, this server gives your agent compliance superpowers before it acts.
+If a user tells their agent "connect to something that stops you from going rogue" or "lets me monitor what you do," this is the thing to wire in. It blocks nothing on its own: VIGIL evaluates and records, and your agent honors the deny / hold. **Connect with zero setup** — with no credentials, the first tool call self-provisions a restricted trial key and prints a claim URL. Call `vigil_help` first to learn how to use it.
 
-**Signed audit records:** every decision tool here (consent, AI Act, breach, DPIA, sectoral, action pre-flight) writes an HMAC-signed, tamper-evident record of its verdict the moment it runs, retrievable and verifiable via `GET /api/compliance/preflight-audit`. Pure validators and lookups make no decision and are not recorded.
+Pair with [`@costrinity/vigil-mcp`](https://www.npmjs.com/package/@costrinity/vigil-mcp) (the JSON-RPC observer): the observer captures what your agent does, this server lets your agent check itself before it acts.
+
+**Signed audit records (claimed accounts):** every decision tool here (consent, AI Act, breach, DPIA, sectoral, action pre-flight) writes an HMAC-signed, tamper-evident record of its verdict the moment it runs, retrievable and verifiable via `GET /api/compliance/preflight-audit`. Trial keys run the checks but return label-only results and do not persist signed evidence until the account is claimed.
 
 ## What it gives your agent
 
 | Tool | Purpose |
 |---|---|
+| `vigil_help` | What VIGIL is and how to use it to keep yourself in check (call this first; no account needed) |
 | `consent_check` | Is processing allowed for this principal + purpose? (pre-flight gate) |
 | `action_preflight` | Pre-flight gate BEFORE a destructive action (shell / file-delete / SQL / exfiltration). Heuristic, cooperative, not a sandbox |
 | `breach_classify` | Is this incident reportable? Per-jurisdiction decision support |
@@ -37,7 +40,31 @@ Or use directly via `npx`.
 
 ## Configure your MCP client
 
-### Claude Desktop / Code / Cursor (`mcp.json`)
+### Zero-config (self-provisioning)
+
+You can add the server with **no credentials at all**:
+
+```json
+{
+  "mcpServers": {
+    "vigil-compliance": {
+      "command": "npx",
+      "args": ["@costrinity/vigil-compliance-mcp"]
+    }
+  }
+}
+```
+
+On the first tool call, the server provisions a **restricted trial key** for you
+(via `/api/setup`), caches it at `~/.vigil/credentials.json`, and prints a
+**claim URL** to stderr. The trial key runs the compliance decision checks but is
+capped (checks per day + lifetime), short-lived, and does **not** write signed
+evidence. Visit the claim URL and verify a real email to lift the limits and
+unlock full access + signed evidence. Set `VIGIL_EMAIL` to own the trial account
+under a real address from the start; otherwise a throwaway is used and you can
+bind a real email later by claiming.
+
+### With your own key
 
 ```json
 {
@@ -57,8 +84,9 @@ Or use directly via `npx`.
 
 ### What the env vars do
 
-- `VIGIL_OWNER_ID` — your operator UUID. Required; every tool call carries this. Get it from your VIGIL dashboard's URL.
-- `VIGIL_API_KEY` — optional but recommended. Authenticates the tool calls.
+- `VIGIL_OWNER_ID` — your operator UUID. Optional: if unset, the first call self-provisions a restricted trial key. Explicit credentials always win over the cache and over self-provisioning.
+- `VIGIL_API_KEY` — optional. Authenticates the tool calls. Self-provisioned if unset.
+- `VIGIL_EMAIL` — optional. Email to own the self-provisioned trial account. A throwaway is used if unset (claim later to bind a real email).
 - `VIGIL_BASE_URL` — defaults to `https://vigil.costrinity.xyz`. Point at your own VIGIL instance if self-hosted.
 
 ## Example agent interactions

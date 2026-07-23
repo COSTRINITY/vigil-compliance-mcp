@@ -4,14 +4,18 @@ startCommand:
   type: stdio
   configSchema:
     type: object
-    required: ["vigilOwnerId"]
+    # No required fields: with no credentials, the first tool call self-provisions
+    # a restricted trial key and prints a claim URL. Zero setup to connect.
     properties:
       vigilOwnerId:
         type: string
-        description: "Your VIGIL operator UUID (from your dashboard URL)."
+        description: "Optional. Your VIGIL operator UUID. If unset, a trial key is self-provisioned on first use."
       vigilApiKey:
         type: string
-        description: "Your VIGIL API key (vigil_...). Authenticates tool calls."
+        description: "Optional. Your VIGIL API key (vigil_...). Self-provisioned if unset."
+      vigilEmail:
+        type: string
+        description: "Optional. Email to own the self-provisioned trial account (claim later to bind a real email)."
       vigilBaseUrl:
         type: string
         default: "https://vigil.costrinity.xyz"
@@ -21,8 +25,9 @@ startCommand:
       command: 'npx',
       args: ['@costrinity/vigil-compliance-mcp'],
       env: {
-        VIGIL_OWNER_ID: config.vigilOwnerId,
+        VIGIL_OWNER_ID: config.vigilOwnerId || '',
         VIGIL_API_KEY: config.vigilApiKey || '',
+        VIGIL_EMAIL: config.vigilEmail || '',
         VIGIL_BASE_URL: config.vigilBaseUrl || 'https://vigil.costrinity.xyz'
       }
     })
