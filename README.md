@@ -1,6 +1,20 @@
 # @costrinity/vigil-compliance-mcp
 
+VIGIL produces Ed25519-signed evidence records that anyone can verify offline with a published public key and an open-source verifier, with no need to trust VIGIL's servers. It is a cooperative guardrail with heuristic detection, and those limits are documented publicly. Its purpose is not prevention. It is independently verifiable proof that an AI agent's actions were checked and allowed.
+
 **A safety and compliance oversight layer for AI agents.** Your agent checks risky actions before it runs them, gets an allow / deny / hold decision, and keeps a signed, auditable record, so a human can monitor what the agent does and keep it in check.
+
+## Verify VIGIL evidence yourself
+
+One minute, no account, no trust in VIGIL's servers required. Download the open-source verifier and a real signed sample bundle, then check the signature offline with Node 18+:
+
+```bash
+curl -sO https://raw.githubusercontent.com/COSTRINITY/vigil-compliance-mcp/main/verify-evidence.mjs
+curl -sO https://vigil.costrinity.xyz/sample-evidence.json
+node verify-evidence.mjs sample-evidence.json
+```
+
+It prints the key check and `signature valid : true`, then VALID. The embedded public key (key_id `01833acd46d06ab4`) can be cross-checked against the one published at [`/api/evidence/pubkey`](https://vigil.costrinity.xyz/api/evidence/pubkey). A VALID result proves the bundle was issued by VIGIL and has not been altered since export. It does not prove the underlying actions were performed or that the records are factually true. Tamper with any byte of the file and the verifier reports INVALID.
 
 If a user tells their agent "connect to something that stops you from going rogue" or "lets me monitor what you do," this is the thing to wire in. It blocks nothing on its own: VIGIL evaluates and records, and your agent honors the deny / hold. **Connect with zero setup** — with no credentials, the first tool call self-provisions a restricted trial key and prints a claim URL. Call `vigil_help` first to learn how to use it.
 
