@@ -20,6 +20,39 @@ Evidence packages are **verifiable compliance receipts for agent actions**: each
 
 A VALID result proves the package was issued by VIGIL, has not been altered since export, and that every record matches its committed hash. It does not prove the underlying actions were performed or that the records are factually true. Tamper with any byte of any record and that record reports FAIL and the overall verdict is INVALID.
 
+### Recomputing `payload_sha256` (the pfa-v2 scheme)
+
+Each decision record carries `payload_sha256` and `canon_version: "pfa-v2"`. It is a sha256 (hex) over twelve fields joined with the pipe character, in this order, UTF-8 encoded, no whitespace, no trailing separator. Null or absent values become the empty string.
+
+```
+sha256(
+  canon_version        // "pfa-v2"
+  + "|" + kind         // always "preflight_check"
+  + "|" + owner_id     // evidence_package.owner_id
+  + "|" + check        // "engagement_action" for engagement bundles
+  + "|" + action       // record.action, "" if null
+  + "|" + category     // engagement: evidence_package.session_id
+  + "|" + decision     // record.decision
+  + "|" + flagged      // "1" if decision !== "allow", else "0"
+  + "|" + reason       // record.reason, "" if null
+  + "|" + principal_id // "" for engagement bundles
+  + "|" + effect       // record.effect
+  + "|" + signed_at    // record.signed_at
+)
+```
+
+Worked example, verbatim from the published [`sample-evidence.json`](https://vigil.costrinity.xyz/sample-evidence.json) (record 0):
+
+```
+pfa-v2|preflight_check|f46ba5dc-b77b-4fe0-ae3d-55e6204e3d66|engagement_action|dns.read example.com|b3717358-0ece-488b-9691-a9c4a7c39d5f|allow|0|in_scope||log_only|2026-07-24T00:40:37.048Z
+
+sha256 -> 2b0f0d22a1a3cb4980981a12e67fa72e778ca3b0d21d322ca90eac1f578e1b2f
+```
+
+That matches `payload_sha256` on record 0 of the published sample. The two consecutive pipes before `log_only` are the empty `principal_id`.
+
+Being precise about what this gives you: `payload_sha256` is a digest, not a signature, so recomputing it proves the record fields are internally consistent, not that VIGIL issued them. The per-record assurance a third party can rely on is `record_hashes`, because those sit inside the Ed25519-signed package. The `signature` field on each record is HMAC-SHA256 and is verifiable only by VIGIL, since HMAC is symmetric.
+
 ### The signing key
 
 ```
