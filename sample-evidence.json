@@ -1,9 +1,9 @@
 {
   "evidence_package": {
     "format": "vigil-engagement-evidence-v1",
-    "owner_id": "ab517e9b-d1d7-4359-b450-3d1614d23dd8",
-    "session_id": "8db66bf3-6bfb-4c15-bd0f-79653556ddb2",
-    "generated_at": "2026-07-23T20:59:38.900Z",
+    "owner_id": "f46ba5dc-b77b-4fe0-ae3d-55e6204e3d66",
+    "session_id": "b3717358-0ece-488b-9691-a9c4a7c39d5f",
+    "generated_at": "2026-07-24T00:40:40.203Z",
     "scope_policy": {
       "expires_at": null,
       "max_writes": 1,
@@ -15,9 +15,9 @@
         "example.com"
       ]
     },
-    "opened_at": "2026-07-23T20:59:34.439803+00:00",
+    "opened_at": "2026-07-24T00:40:36.099608+00:00",
     "metadata": {
-      "note": "Synthetic demo session published so anyone can verify a VIGIL evidence bundle offline. No real data.",
+      "note": "SYNTHETIC demo session published so anyone can verify a VIGIL evidence bundle offline. No real data, no real customer, no real domain ownership.",
       "engagement": "public-sample"
     },
     "summary": {
@@ -27,31 +27,36 @@
         "deny": 1
       }
     },
+    "record_hash_algorithm": "sha256-canonical-json",
+    "record_hashes": [
+      "1fff15ffd2aad97d3e8a2fae0ada66c4d705f66d7d769ce6a48f8c8ef62b28ec",
+      "d234a538709b5ab2ab840f2189283bef59e5db35828a80a209ae5e855f69da52"
+    ],
     "decisions": [
       {
-        "id": "2ba438c6-0624-410d-a684-417e7cde4d06",
-        "occurred_at": "2026-07-23T20:59:35.859297+00:00",
+        "id": "676d426a-c57c-4002-ac23-8930c3d01fd1",
+        "occurred_at": "2026-07-24T00:40:37.251943+00:00",
         "action": "dns.read example.com",
         "decision": "allow",
         "reason": "in_scope",
         "effect": "log_only",
-        "signed_at": "2026-07-23T20:59:35.634Z",
-        "payload_sha256": "bb949a63f5ded569de8b86c4712be90eb440af3661343e4cd2c3b8a9633259b2",
-        "signature": "9d6605f7069e4d4f62c2293053db106e39b4d51ed64bfa27d9da5f434c6f1aee",
+        "signed_at": "2026-07-24T00:40:37.048Z",
+        "payload_sha256": "2b0f0d22a1a3cb4980981a12e67fa72e778ca3b0d21d322ca90eac1f578e1b2f",
+        "signature": "d33fe75cbf41c6b6fb9d580b3140bfed0560d78196512f71df5f005dc61c3ff0",
         "sig_alg": "HMAC-SHA256",
         "canon_version": "pfa-v2",
         "hmac_verified": true
       },
       {
-        "id": "2a5e941c-8941-44ee-9ee9-419c8914b971",
-        "occurred_at": "2026-07-23T20:59:37.326008+00:00",
+        "id": "0abce9bb-2770-4ead-b7e7-967047dc3d5f",
+        "occurred_at": "2026-07-24T00:40:38.60583+00:00",
         "action": "dns.write evil.example.net",
         "decision": "deny",
         "reason": "domain_not_allowed: evil.example.net",
         "effect": "log_only",
-        "signed_at": "2026-07-23T20:59:37.123Z",
-        "payload_sha256": "8eaa271692d5f1ec26e5531d30803c88359e77e3a713b936f94744bed2646e8f",
-        "signature": "b4cbc2519a1215885cd4ab36511cbecd31ee5f1d1f2d901393293d69f7935427",
+        "signed_at": "2026-07-24T00:40:38.329Z",
+        "payload_sha256": "87a4d85aea3062cf30a63db7048f5d67b8ddeff27a5a6e6045211bca617a0e90",
+        "signature": "e9782737d2e9313509493dd00a6e59fbbf29c68892d28fdc25ecbc8de1810998",
         "sig_alg": "HMAC-SHA256",
         "canon_version": "pfa-v2",
         "hmac_verified": true
@@ -61,8 +66,8 @@
   "package_signature": {
     "alg": "Ed25519",
     "public_key_id": "01833acd46d06ab4",
-    "signature": "eCj1KCtjfFxMn39stc6sLso82se9W97nshynfxavcGOFLhksjWJasgVsSvplFSLOAOLdCt7SH89uEzIq+bOwAw==",
-    "signed_at": "2026-07-23T20:59:38.900Z"
+    "signature": "oO4D2FZq2klR6La7rcBxcB5+imxRfjrmwhAPL9TWr8ZPEYngOaLgaXIXT7MJpl4C32nOOQ6qN791bmU+RTsuDw==",
+    "signed_at": "2026-07-24T00:40:40.203Z"
   },
   "verification": {
     "package_signature_alg": "Ed25519",
@@ -70,6 +75,6 @@
     "public_key_url": "https://vigil.costrinity.xyz/api/evidence/pubkey",
     "verify_endpoint": "https://vigil.costrinity.xyz/api/evidence/verify",
     "offline_verifier": "https://github.com/COSTRINITY/vigil-compliance-mcp/blob/main/verify-evidence.mjs",
-    "proves": "package_signature: this exact bundle was issued by VIGIL and not altered since export, verifiable offline with the published public key. hmac_verified (per decision): VIGIL confirmed the record is unchanged since written (VIGIL-verifiable). Neither proves the actions themselves were performed or that the records are factually true."
+    "proves": "package_signature: this exact bundle was issued by VIGIL and not altered since export, verifiable offline with the published public key. record_hashes: every individual decision record is committed by sha256 (canonical JSON) inside the signed bundle, so a third party can independently verify each record, not just the bundle. hmac_verified (per decision) is the internal write-time integrity check, verifiable only by VIGIL. None of these prove the actions were performed or that the records are factually true."
   }
 }

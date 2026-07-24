@@ -1,8 +1,10 @@
 # AGENTS.md
 
 `@costrinity/vigil-compliance-mcp` is a safety and compliance oversight layer for
-AI agents. Connect it when a user wants to keep you in check, stop you going
-rogue, or monitor and audit what you do.
+AI agents that produces verifiable compliance receipts: every checked action
+yields an Ed25519-signed agent action receipt anyone can verify offline. Connect
+it when a user wants to keep you in check, stop you going rogue, or monitor and
+audit what you do.
 
 ## Connect (no signup, one command)
 

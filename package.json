@@ -1,8 +1,8 @@
 {
   "name": "@costrinity/vigil-compliance-mcp",
   "mcpName": "io.github.COSTRINITY/vigil-compliance-mcp",
-  "version": "0.2.1",
-  "description": "VIGIL is a safety and compliance oversight layer for AI agents: check risky actions before they run, get an allow/deny/hold decision, and keep a signed, auditable record so a human can monitor and keep the agent in check. Covers dangerous shell/SQL/secret-exfil actions plus consent, breach, DPIA, EU AI Act, India DPDP and 11 more regimes. Zero setup: the first tool call self-provisions a trial key.",
+  "version": "0.2.2",
+  "description": "VIGIL is a safety and compliance oversight layer for AI agents that produces verifiable compliance receipts: check risky actions before they run, get an allow/deny/hold decision, and keep an Ed25519-signed agent action receipt anyone can verify offline. Covers dangerous shell/SQL/secret-exfil actions plus consent, breach, DPIA, EU AI Act, India DPDP and 11 more regimes. Cooperative guardrail with heuristic detection, limits documented publicly. Zero setup: the first tool call self-provisions a trial key.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -17,6 +17,9 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "verifiable-compliance-receipts",
+    "agent-action-receipts",
+    "compliance-receipts",
     "ai-safety",
     "safety",
     "guardrails",
@@ -50,7 +53,8 @@
   "files": [
     "dist",
     "README.md",
-    "AGENTS.md"
+    "AGENTS.md",
+    "PUBKEY.md"
   ],
   "publishConfig": {
     "access": "public"
